@@ -1,90 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Dimensions,
-} from 'react-native';
-import { Text, Button } from 'react-native-paper';
-
-import { colors, spacing, borderRadius } from '@/styles/theme';
+  Animated,
+} from "react-native";
+import { Text } from "react-native-paper";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+} from "@/styles/theme";
 
 type Props = any;
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const OnboardingScreen = ({ navigation }: Props) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const scaleAnim = new Animated.Value(0.8);
 
   const slides = [
     {
-      title: 'Welcome to SafeDrive',
-      description: 'Your AI-powered tyre safety companion',
-      icon: '🚗',
+      title: "Welcome to SafeDrive",
+      description:
+        "Your enterprise-grade AI-powered tyre safety companion for professional fleet management",
+      icon: "🛡️",
+      color: colors.primary.main,
     },
     {
-      title: 'Scan with AI',
-      description: 'Take photos of your tyres for instant analysis',
-      icon: '📸',
+      title: "Intelligent Scanning",
+      description:
+        "Advanced AI technology captures and analyzes tyre conditions with precision",
+      icon: "🔍",
+      color: colors.secondary.main,
     },
     {
-      title: 'Get Insights',
-      description: 'Understand tyre conditions with detailed reports',
-      icon: '📊',
+      title: "Detailed Analytics",
+      description:
+        "Get comprehensive insights and predictive maintenance recommendations",
+      icon: "📊",
+      color: colors.info.main,
     },
     {
-      title: 'Stay Safe',
-      description: 'Maintain your vehicle with confidence',
-      icon: '✅',
+      title: "Stay Protected",
+      description:
+        "Maintain your fleet with confidence and real-time safety monitoring",
+      icon: "✓",
+      color: colors.success.main,
     },
   ];
 
   const handleNext = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.8,
+      duration: 0,
+      useNativeDriver: true,
+    }).start();
+
     if (currentStep < slides.length - 1) {
       setCurrentStep(currentStep + 1);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }).start();
     } else {
-      navigation.replace('Login');
+      navigation.replace("Login");
     }
   };
 
   const handleSkip = () => {
-    navigation.replace('Login');
+    navigation.replace("Login");
   };
 
   const slide = slides[currentStep];
+  const progress = (currentStep + 1) / slides.length;
 
   return (
     <View style={styles.container}>
       <ScrollView
         scrollEnabled={false}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header with Progress Bar */}
         <View style={styles.header}>
-          <Text style={styles.stepIndicator}>
-            {currentStep + 1} of {slides.length}
-          </Text>
-          <TouchableOpacity onPress={handleSkip}>
-            <Text style={styles.skipButton}>Skip</Text>
-          </TouchableOpacity>
+          <View style={styles.progressBarContainer}>
+            <View
+              style={[styles.progressBar, { width: `${progress * 100}%` }]}
+            />
+          </View>
+          <View style={styles.headerRow}>
+            <Text style={styles.stepIndicator}>
+              {currentStep + 1} of {slides.length}
+            </Text>
+            <TouchableOpacity onPress={handleSkip}>
+              <Text style={styles.skipButton}>Skip</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
-          <Text style={styles.icon}>{slide.icon}</Text>
+        <Animated.View
+          style={[styles.content, { transform: [{ scale: scaleAnim }] }]}
+        >
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${slide.color}20` },
+            ]}
+          >
+            <Text style={styles.icon}>{slide.icon}</Text>
+          </View>
           <Text style={styles.title}>{slide.title}</Text>
           <Text style={styles.description}>{slide.description}</Text>
-        </View>
+        </Animated.View>
 
         {/* Dots Indicator */}
         <View style={styles.dotsContainer}>
           {slides.map((_, index) => (
-            <View
+            <Animated.View
               key={index}
               style={[
                 styles.dot,
-                index === currentStep && styles.activeDot,
+                index === currentStep && [
+                  styles.activeDot,
+                  { backgroundColor: slide.color },
+                ],
               ]}
             />
           ))}
@@ -92,14 +139,15 @@ const OnboardingScreen = ({ navigation }: Props) => {
 
         {/* Buttons */}
         <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
+          <TouchableOpacity
+            style={[styles.nextButton, { backgroundColor: slide.color }]}
             onPress={handleNext}
-            style={styles.nextButton}
-            labelStyle={styles.buttonLabel}
+            activeOpacity={0.8}
           >
-            {currentStep === slides.length - 1 ? 'Get Started' : 'Next'}
-          </Button>
+            <Text style={styles.buttonLabel}>
+              {currentStep === slides.length - 1 ? "Get Started" : "Continue"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -116,52 +164,70 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xxxl,
+  },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: colors.neutral.gray200,
+    borderRadius: borderRadius.full,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: colors.primary.main,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   stepIndicator: {
-    fontSize: 14,
+    ...typography.caption,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "600",
   },
   skipButton: {
-    fontSize: 14,
+    ...typography.subtitle2,
     color: colors.primary.main,
-    fontWeight: '600',
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xxxl,
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.xxl,
   },
   icon: {
-    fontSize: 80,
-    marginBottom: spacing.xl,
+    fontSize: 56,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.h3,
     color: colors.text,
     marginBottom: spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
   description: {
-    fontSize: 16,
+    ...typography.body1,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
   },
   dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.xxl,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   dot: {
     width: 8,
@@ -170,20 +236,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.gray200,
   },
   activeDot: {
-    backgroundColor: colors.primary.main,
-    width: 24,
+    width: 28,
+    borderRadius: 4,
   },
   buttonContainer: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
   nextButton: {
-    backgroundColor: colors.primary.main,
-    paddingVertical: spacing.md,
+    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    justifyContent: "center",
+    alignItems: "center",
+    ...(shadows.lg as any),
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.neutral.white,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -6,18 +6,26 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
-
-import { colors, spacing, borderRadius, typography } from '@/styles/theme';
+  ActivityIndicator,
+} from "react-native";
+import { Text, TextInput } from "react-native-paper";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+} from "@/styles/theme";
 
 type Props = any;
 
 const LoginScreen = ({ navigation }: Props) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -25,21 +33,29 @@ const LoginScreen = ({ navigation }: Props) => {
     setTimeout(() => {
       // Store user info
       setLoading(false);
-      navigation.replace('Dashboard');
+      navigation.replace("Dashboard");
     }, 1500);
   };
 
+  const isFormValid = email.trim() && password.trim();
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
+          <View style={styles.headerIcon}>
+            <Text style={styles.headerIconText}>🔐</Text>
+          </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>
-            Sign in to continue to SafeDrive
+            Sign in to your SafeDrive account to continue
           </Text>
         </View>
 
@@ -47,76 +63,114 @@ const LoginScreen = ({ navigation }: Props) => {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
+            <View
+              style={[
+                styles.inputWrapper,
+                emailFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="name@company.com"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              editable={!loading}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-            />
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Password</Text>
+              <TouchableOpacity>
+                <Text style={styles.forgotPassword}>Forgot?</Text>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={[
+                styles.inputWrapper,
+                passwordFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? "eye-off" : "eye"}
+                    onPress={() => setShowPassword(!showPassword)}
+                    color={colors.textSecondary}
+                  />
+                }
+              />
+            </View>
           </View>
 
-          <TouchableOpacity>
-            <Text style={styles.forgotPassword}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <Button
-            mode="contained"
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              !isFormValid && styles.loginButtonDisabled,
+              loading && styles.loginButtonLoading,
+            ]}
             onPress={handleLogin}
-            loading={loading}
-            disabled={loading || !email || !password}
-            style={styles.loginButton}
-            labelStyle={styles.buttonLabel}
+            disabled={!isFormValid || loading}
+            activeOpacity={0.8}
           >
-            Sign In
-          </Button>
+            {loading ? (
+              <ActivityIndicator color={colors.neutral.white} size="small" />
+            ) : (
+              <Text style={styles.buttonLabel}>Sign In</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Divider */}
         <View style={styles.dividerContainer}>
           <View style={styles.divider} />
-          <Text style={styles.dividerText}>or</Text>
+          <Text style={styles.dividerText}>or continue with</Text>
           <View style={styles.divider} />
         </View>
 
         {/* Social Login */}
         <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>G</Text>
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
+            <Text style={styles.socialIcon}>🔷</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>f</Text>
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
+            <Text style={styles.socialIcon}>👤</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>A</Text>
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
+            <Text style={styles.socialIcon}>🍎</Text>
           </TouchableOpacity>
         </View>
 
         {/* Register Link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.replace('Register')}>
-            <Text style={styles.registerLink}>Sign Up</Text>
+          <TouchableOpacity onPress={() => navigation.replace("Register")}>
+            <Text style={styles.registerLink}>Create Account</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Security Notice */}
+        <View style={styles.securityNotice}>
+          <Text style={styles.securityIcon}>🔒</Text>
+          <Text style={styles.securityText}>
+            Your data is encrypted and secure
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -126,7 +180,7 @@ const LoginScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral.white,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -135,57 +189,100 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   header: {
-    marginBottom: spacing.xxl,
+    alignItems: "center",
+    marginBottom: spacing.xxxl,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  form: {
+  headerIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: `${colors.primary.main}15`,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.xl,
   },
-  inputGroup: {
-    marginBottom: spacing.lg,
+  headerIconText: {
+    fontSize: 40,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
+  title: {
+    ...typography.h2,
     color: colors.text,
+    marginBottom: spacing.md,
+    textAlign: "center",
+  },
+  subtitle: {
+    ...typography.body2,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    textAlign: "center",
+    maxWidth: 280,
+  },
+  form: {
+    marginBottom: spacing.xxl,
+  },
+  inputGroup: {
+    marginBottom: spacing.xl,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
-  input: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
+  label: {
+    ...typography.subtitle2,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  inputWrapper: {
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+    ...(shadows.sm as any),
+  },
+  inputWrapperFocused: {
+    borderColor: colors.primary.main,
+    borderWidth: 2,
+  },
+  input: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...typography.body1,
+    color: colors.text,
+    backgroundColor: "transparent",
   },
   forgotPassword: {
-    fontSize: 14,
+    ...typography.caption,
     color: colors.primary.main,
-    fontWeight: '500',
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
+    fontWeight: "600",
   },
   loginButton: {
     backgroundColor: colors.primary.main,
-    paddingVertical: spacing.md,
+    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: spacing.lg,
+    ...(shadows.lg as any),
+  },
+  loginButtonDisabled: {
+    backgroundColor: colors.neutral[300],
+    opacity: 0.6,
+  },
+  loginButtonLoading: {
+    minHeight: 56,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.neutral.white,
+    fontWeight: "700",
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: spacing.xxl,
   },
   divider: {
     flex: 1,
@@ -194,42 +291,64 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: spacing.md,
+    ...typography.caption,
     color: colors.textSecondary,
-    fontSize: 14,
+    fontWeight: "500",
   },
   socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: spacing.lg,
     marginBottom: spacing.xxl,
   },
   socialButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    ...(shadows.sm as any),
   },
   socialIcon: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
+    fontSize: 24,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.xl,
   },
   footerText: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
   },
   registerLink: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.primary.main,
-    fontWeight: '600',
+    fontWeight: "700",
+  },
+  securityNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: `${colors.success.main}10`,
+    borderWidth: 1,
+    borderColor: `${colors.success.main}30`,
+  },
+  securityIcon: {
+    fontSize: 16,
+    marginRight: spacing.sm,
+  },
+  securityText: {
+    ...typography.caption,
+    color: colors.success.main,
+    fontWeight: "500",
   },
 });
 

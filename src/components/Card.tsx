@@ -1,6 +1,12 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { colors, borderRadius, spacing, shadows } from '../styles/theme';
+import React from "react";
+import {
+  View,
+  StyleSheet,
+  ViewStyle,
+  StyleProp,
+  TouchableOpacity,
+} from "react-native";
+import { colors, borderRadius, spacing, shadows } from "../styles/theme";
 
 export interface CardProps {
   children: React.ReactNode;
@@ -8,6 +14,8 @@ export interface CardProps {
   elevated?: boolean;
   padding?: number;
   onPress?: () => void;
+  borderWidth?: number;
+  borderColor?: string;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -16,30 +24,38 @@ export const Card: React.FC<CardProps> = ({
   elevated = false,
   padding = spacing.lg,
   onPress,
+  borderWidth = 0,
+  borderColor = "transparent",
 }) => {
-  const shadowStyle = elevated ? shadows.lg : shadows.md;
+  const shadowStyle = elevated ? shadows.xl : shadows.lg;
+  const CardComponent: React.ElementType = onPress ? TouchableOpacity : View;
 
   return (
-    <View
+    <CardComponent
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.8 : 1}
       style={[
         styles.card,
         {
           padding,
           backgroundColor: colors.neutral.white,
-          borderRadius: borderRadius.lg,
+          borderRadius: borderRadius.xl,
+          borderWidth,
+          borderColor,
           ...(shadowStyle as any),
         },
         style,
       ]}
     >
       {children}
-    </View>
+    </CardComponent>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    borderRadius: borderRadius.xl,
+    overflow: "hidden",
   },
 });

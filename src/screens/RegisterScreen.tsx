@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -6,22 +6,32 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
-
-import { colors, spacing, borderRadius } from '@/styles/theme';
+  ActivityIndicator,
+} from "react-native";
+import { Text, TextInput } from "react-native-paper";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+} from "@/styles/theme";
 
 type Props = any;
 
 const RegisterScreen = ({ navigation }: Props) => {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
@@ -32,24 +42,38 @@ const RegisterScreen = ({ navigation }: Props) => {
     // Simulate register API call
     setTimeout(() => {
       setLoading(false);
-      navigation.replace('Dashboard');
+      navigation.replace("Dashboard");
     }, 1500);
   };
 
+  const isFormValid =
+    fullName.trim() &&
+    email.trim() &&
+    password.trim() &&
+    confirmPassword.trim() &&
+    agreeToTerms &&
+    password === confirmPassword;
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.replace('Login')}>
-            <Text style={styles.backButton}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => navigation.replace("Login")}
+            style={styles.backButtonContainer}
+          >
+            <Text style={styles.backButton}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>
-            Join SafeDrive to protect your tyres
+            Join SafeDrive's enterprise fleet safety network
           </Text>
         </View>
 
@@ -57,106 +81,150 @@ const RegisterScreen = ({ navigation }: Props) => {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="John Doe"
-              value={fullName}
-              onChangeText={setFullName}
-              editable={!loading}
-            />
+            <View
+              style={[
+                styles.inputWrapper,
+                nameFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="John Doe"
+                placeholderTextColor={colors.textTertiary}
+                value={fullName}
+                onChangeText={setFullName}
+                onFocus={() => setNameFocused(true)}
+                onBlur={() => setNameFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
+            <View
+              style={[
+                styles.inputWrapper,
+                emailFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="name@company.com"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="At least 8 characters"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              editable={!loading}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-            />
+            <View
+              style={[
+                styles.inputWrapper,
+                passwordFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? "eye-off" : "eye"}
+                    onPress={() => setShowPassword(!showPassword)}
+                    color={colors.textSecondary}
+                  />
+                }
+              />
+            </View>
+            <Text style={styles.passwordHint}>At least 8 characters</Text>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm your password"
-              secureTextEntry={!showConfirmPassword}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              editable={!loading}
-              right={
-                <TextInput.Icon
-                  icon={showConfirmPassword ? 'eye-off' : 'eye'}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                />
-              }
-            />
+            <View
+              style={[
+                styles.inputWrapper,
+                confirmPasswordFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                onFocus={() => setConfirmPasswordFocused(true)}
+                onBlur={() => setConfirmPasswordFocused(false)}
+                editable={!loading}
+                underlineStyle={{ display: "none" }}
+                right={
+                  <TextInput.Icon
+                    icon={showConfirmPassword ? "eye-off" : "eye"}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    color={colors.textSecondary}
+                  />
+                }
+              />
+            </View>
+            {password && confirmPassword && password !== confirmPassword && (
+              <Text style={styles.errorHint}>Passwords don't match</Text>
+            )}
           </View>
 
           {/* Terms & Conditions */}
           <View style={styles.termsContainer}>
             <TouchableOpacity
-              style={styles.checkbox}
+              style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}
               onPress={() => setAgreeToTerms(!agreeToTerms)}
+              activeOpacity={0.7}
             >
-              <View
-                style={[
-                  styles.checkboxBox,
-                  agreeToTerms && styles.checkboxBoxChecked,
-                ]}
-              >
-                {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
-              </View>
+              {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
             </TouchableOpacity>
             <Text style={styles.termsText}>
-              I agree to the Terms & Conditions
+              I agree to the{" "}
+              <Text style={styles.termsLink}>Terms & Conditions</Text>
             </Text>
           </View>
 
-          <Button
-            mode="contained"
+          <TouchableOpacity
+            style={[
+              styles.registerButton,
+              !isFormValid && styles.registerButtonDisabled,
+              loading && styles.registerButtonLoading,
+            ]}
             onPress={handleRegister}
-            loading={loading}
-            disabled={
-              loading ||
-              !fullName ||
-              !email ||
-              !password ||
-              !confirmPassword ||
-              !agreeToTerms
-            }
-            style={styles.registerButton}
-            labelStyle={styles.buttonLabel}
+            disabled={!isFormValid || loading}
+            activeOpacity={0.8}
           >
-            Create Account
-          </Button>
+            {loading ? (
+              <ActivityIndicator color={colors.neutral.white} size="small" />
+            ) : (
+              <Text style={styles.buttonLabel}>Create Account</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Login Link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.replace('Login')}>
+          <TouchableOpacity onPress={() => navigation.replace("Login")}>
             <Text style={styles.loginLink}>Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -168,31 +236,39 @@ const RegisterScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral.white,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxxl,
+  },
+  backButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.neutral[50],
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.lg,
   },
   backButton: {
-    fontSize: 14,
-    color: colors.primary.main,
-    fontWeight: '600',
-    marginBottom: spacing.md,
+    fontSize: 24,
+    fontWeight: "600",
+    color: colors.text,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.h2,
     color: colors.text,
     marginBottom: spacing.md,
+    fontWeight: "700",
   },
   subtitle: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
     lineHeight: 20,
   },
@@ -201,75 +277,114 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   inputGroup: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...typography.subtitle2,
     color: colors.text,
+    fontWeight: "600",
     marginBottom: spacing.sm,
   },
-  input: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
+  inputWrapper: {
+    borderWidth: 1.5,
     borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+    ...(shadows.sm as any),
+  },
+  inputWrapperFocused: {
+    borderColor: colors.primary.main,
+    borderWidth: 2,
+  },
+  input: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    ...typography.body1,
+    color: colors.text,
+    backgroundColor: "transparent",
+  },
+  passwordHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  errorHint: {
+    ...typography.caption,
+    color: colors.danger.main,
+    marginTop: spacing.sm,
+    fontWeight: "500",
   },
   termsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   checkbox: {
-    padding: spacing.sm,
-    marginRight: spacing.md,
-  },
-  checkboxBox: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.md,
+    backgroundColor: colors.surface,
   },
-  checkboxBoxChecked: {
+  checkboxChecked: {
     backgroundColor: colors.primary.main,
     borderColor: colors.primary.main,
   },
   checkmark: {
     color: colors.neutral.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "700",
   },
   termsText: {
-    fontSize: 13,
+    ...typography.body2,
     color: colors.text,
     flex: 1,
     lineHeight: 18,
   },
+  termsLink: {
+    color: colors.primary.main,
+    fontWeight: "600",
+  },
   registerButton: {
     backgroundColor: colors.primary.main,
-    paddingVertical: spacing.md,
-    marginTop: spacing.lg,
+    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: spacing.xl,
+    ...(shadows.lg as any),
+  },
+  registerButtonDisabled: {
+    backgroundColor: colors.neutral[300],
+    opacity: 0.6,
+  },
+  registerButtonLoading: {
+    minHeight: 56,
   },
   buttonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
+    color: colors.neutral.white,
+    fontWeight: "700",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
   footerText: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
   },
   loginLink: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.primary.main,
-    fontWeight: '600',
+    fontWeight: "700",
   },
 });
 

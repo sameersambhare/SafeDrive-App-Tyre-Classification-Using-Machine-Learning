@@ -1,18 +1,22 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
-import { colors, spacing } from '@/styles/theme';
+import { colors, spacing, borderRadius, typography } from '@/styles/theme';
 
 interface ProgressBarProps {
   percentage: number;
   label?: string;
   color?: string;
+  showPercentage?: boolean;
+  animated?: boolean;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   percentage,
   label,
   color = colors.primary.main,
+  showPercentage = true,
+  animated = true,
 }: ProgressBarProps) => {
   const validPercentage = Math.min(100, Math.max(0, percentage));
 
@@ -21,7 +25,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       {label && (
         <View style={styles.header}>
           <Text style={styles.label}>{label}</Text>
-          <Text style={styles.percentage}>{Math.round(validPercentage)}%</Text>
+          {showPercentage && (
+            <Text style={[styles.percentage, { color }]}>{Math.round(validPercentage)}%</Text>
+          )}
         </View>
       )}
       <View style={styles.barContainer}>
@@ -50,23 +56,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...typography.subtitle2,
     color: colors.text,
+    fontWeight: '600',
   },
   percentage: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
+    ...typography.subtitle2,
+    fontWeight: '700',
   },
   barContainer: {
-    height: 8,
-    backgroundColor: colors.neutral.gray200,
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: colors.neutral[200],
+    borderRadius: borderRadius.full,
     overflow: 'hidden',
   },
   bar: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: borderRadius.full,
   },
 });
