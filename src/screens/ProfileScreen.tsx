@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Text, Switch, TextInput } from "react-native-paper";
+import { Text, Switch, TextInput, ActivityIndicator } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   colors,
@@ -16,6 +16,8 @@ import {
   typography,
   shadows,
 } from "@/styles/theme";
+import { useAuthStore } from "@/utils/store";
+import { userAPI } from "@/utils/api";
 
 type Props = any;
 
@@ -24,28 +26,144 @@ const ProfileScreen = ({ navigation }: Props) => {
   const [reminders, setReminders] = useState(true);
   const [dataSharing, setDataSharing] = useState(false);
 
-  // editable profile fields
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@email.com");
-  const [phone, setPhone] = useState("+1 (555) 123-4567");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [memberSince, setMemberSince] = useState("");
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const user = useAuthStore((state) => state.user);
+  const setSession = useAuthStore((state) => state.setSession);
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
+
+  const loadProfile = async () => {
+    if (!user?.id && !user?.email) return;
+
+    try {
+      setLoadingProfile(true);
+      const response = await userAPI.getProfile({
+        user_id: user?.id,
+        email: user?.email,
+      });
+      const profile = response.data;
+
+      setName(profile.fullName || "");
+      setEmail(profile.email || "");
+      setPhone(profile.phone || "");
+      setMemberSince(
+        profile.created_at
+          ? new Date(profile.created_at).toLocaleDateString()
+          : ""
+      );
+
+      setSession(
+        {
+          id: profile.id,
+          name: profile.fullName || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+        },
+        token
+      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error || "Failed to load profile from database.";
+      Alert.alert("Profile Error", message);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, [user?.id, user?.email]);
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      const response = await userAPI.updateProfile({
+        user_id: user?.id,
+        email: user?.email,
+        fullName: name,
+        phone,
+      });
+      const profile = response.data;
+      setName(profile.fullName || "");
+      setEmail(profile.email || "");
+      setPhone(profile.phone || "");
+      setSession(
+        {
+          id: profile.id,
+          name: profile.fullName || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+        },
+        token
+      );
+      setIsEditing(false);
+    } catch (error: any) {
+      const message = error?.response?.data?.error || "Failed to update profile.";
+      Alert.alert("Update Failed", message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", onPress: () => {}, style: "cancel" },
       {
         text: "Logout",
-        onPress: () => navigation.replace("Login"),
+        onPress: () => {
+          logout();
+          navigation.replace("Login");
+        },
         style: "destructive",
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently remove your account from MongoDB. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await userAPI.deleteAccount({
+                email: email.trim(),
+                user_id: user?.id,
+              });
+              logout();
+              Alert.alert("Deleted", "Your account has been deleted.");
+              navigation.replace("Login");
+            } catch (error: any) {
+              const message =
+                error?.response?.data?.error ||
+                "Failed to delete account. Please try again.";
+              Alert.alert("Delete Failed", message);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleBack = () => {
     if (navigation.canGoBack && navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      // if not able to go back, navigate to Dashboard as fallback
       navigation.replace("Dashboard");
     }
   };
@@ -56,7 +174,6 @@ const ProfileScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={handleBack}
@@ -65,150 +182,138 @@ const ProfileScreen = ({ navigation }: Props) => {
             <Icon name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Profile</Text>
-          <View style={styles.placeholder} />
-        </View>
-
-        {/* User Profile Section */}
-        <View style={styles.userCardContainer}>
-          <View style={styles.userCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{name.charAt(0)}</Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{name}</Text>
-              <Text style={styles.userEmail}>{email}</Text>
-              <View style={styles.userMeta}>
-                <Text style={styles.userMetaText}>Member since 2024</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.editProfileButton}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.editProfileText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Account Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
-
-          {isEditing ? (
-            <View>
-              <TextInput
-                label="Full Name"
-                value={name}
-                mode="outlined"
-                onChangeText={setName}
-                style={styles.inputField}
-              />
-              <TextInput
-                label="Email Address"
-                value={email}
-                mode="outlined"
-                keyboardType="email-address"
-                onChangeText={setEmail}
-                style={styles.inputField}
-              />
-              <TextInput
-                label="Phone Number"
-                value={phone}
-                mode="outlined"
-                keyboardType="phone-pad"
-                onChangeText={setPhone}
-                style={styles.inputField}
-              />
-
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  style={[styles.editButton, styles.saveButton]}
-                  onPress={() => setIsEditing(false)}
-                >
-                  <Text style={styles.editButtonText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editButton, styles.cancelButton]}
-                  onPress={() => setIsEditing(false)}
-                >
-                  <Text style={styles.editButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.settingsGroup}>
-              <View style={styles.settingItem}>
-                <View style={styles.settingIcon}>
-                  <Icon name="account" size={20} color={colors.primary.main} />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Full Name</Text>
-                  <Text style={styles.settingValue}>{name}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Icon
-                    name="chevron-right"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.settingItem}>
-                <View style={styles.settingIcon}>
-                  <Icon
-                    name="email-outline"
-                    size={20}
-                    color={colors.primary.main}
-                  />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Email Address</Text>
-                  <Text style={styles.settingValue}>{email}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Icon
-                    name="chevron-right"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.settingItem}>
-                <View style={styles.settingIcon}>
-                  <Icon
-                    name="phone-outline"
-                    size={20}
-                    color={colors.primary.main}
-                  />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>Phone Number</Text>
-                  <Text style={styles.settingValue}>{phone}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Icon
-                    name="chevron-right"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.changePasswordButton}>
-            <Icon name="lock-reset" size={20} color={colors.text} />
-            <Text style={styles.changePasswordText}>Change Password</Text>
+          <TouchableOpacity onPress={loadProfile} style={styles.placeholder}>
+            <Text style={styles.refreshText}>Refresh</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Preferences */}
+        {loadingProfile ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <>
+            <View style={styles.userCardContainer}>
+              <View style={styles.userCard}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{(name || "U").charAt(0)}</Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text style={styles.userName}>{name || "-"}</Text>
+                  <Text style={styles.userEmail}>{email || "-"}</Text>
+                  <View style={styles.userMeta}>
+                    <Text style={styles.userMetaText}>
+                      {memberSince ? `Member since ${memberSince}` : "Member"}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.editProfileButton}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Text style={styles.editProfileText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Account Settings</Text>
+
+              {isEditing ? (
+                <View>
+                  <TextInput
+                    label="Full Name"
+                    value={name}
+                    mode="outlined"
+                    onChangeText={setName}
+                    style={styles.inputField}
+                  />
+                  <TextInput
+                    label="Email Address"
+                    value={email}
+                    mode="outlined"
+                    keyboardType="email-address"
+                    disabled
+                    style={styles.inputField}
+                  />
+                  <TextInput
+                    label="Phone Number"
+                    value={phone}
+                    mode="outlined"
+                    keyboardType="phone-pad"
+                    onChangeText={setPhone}
+                    style={styles.inputField}
+                  />
+
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={[styles.editButton, styles.saveButton]}
+                      onPress={handleSaveProfile}
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? (
+                        <ActivityIndicator color={colors.neutral.white} />
+                      ) : (
+                        <Text style={styles.editButtonText}>Save</Text>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.editButton, styles.cancelButton]}
+                      onPress={() => setIsEditing(false)}
+                    >
+                      <Text style={styles.editButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.settingsGroup}>
+                  <View style={styles.settingItem}>
+                    <View style={styles.settingIcon}>
+                      <Icon name="account" size={20} color={colors.primary.main} />
+                    </View>
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.settingLabel}>Full Name</Text>
+                      <Text style={styles.settingValue}>{name || "-"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.settingItem}>
+                    <View style={styles.settingIcon}>
+                      <Icon
+                        name="email-outline"
+                        size={20}
+                        color={colors.primary.main}
+                      />
+                    </View>
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.settingLabel}>Email Address</Text>
+                      <Text style={styles.settingValue}>{email || "-"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.settingItem}>
+                    <View style={styles.settingIcon}>
+                      <Icon
+                        name="phone-outline"
+                        size={20}
+                        color={colors.primary.main}
+                      />
+                    </View>
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.settingLabel}>Phone Number</Text>
+                      <Text style={styles.settingValue}>{phone || "-"}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences & Notifications</Text>
 
@@ -261,52 +366,25 @@ const ProfileScreen = ({ navigation }: Props) => {
           </View>
         </View>
 
-        {/* App Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-
-          <View style={styles.infoGroup}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Version</Text>
-              <Text style={styles.infoValue}>1.0.0</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Last Backup</Text>
-              <Text style={styles.infoValue}>Today, 10:30 AM</Text>
-            </View>
-          </View>
-
-          <View style={styles.linkSection}>
-            <TouchableOpacity style={styles.linkButton}>
-              <Text style={styles.linkIcon}>📄</Text>
-              <Text style={styles.linkText}>Privacy Policy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkButton}>
-              <Text style={styles.linkIcon}>⚖️</Text>
-              <Text style={styles.linkText}>Terms of Service</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkButton}>
-              <Text style={styles.linkIcon}>ℹ️</Text>
-              <Text style={styles.linkText}>About SafeDrive</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Danger Zone */}
         <View style={styles.dangerSection}>
           <TouchableOpacity
             style={styles.logoutButton}
             onPress={handleLogout}
             activeOpacity={0.8}
           >
-            <Text style={styles.logoutIcon}>🚪</Text>
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteButton}>
-            <Text style={styles.deleteIcon}>🗑️</Text>
-            <Text style={styles.deleteButtonText}>Delete Account</Text>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator color={colors.danger.main} />
+            ) : (
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -333,6 +411,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
     backgroundColor: colors.surface,
   },
+  refreshText: {
+    ...typography.caption,
+    color: colors.primary.main,
+    fontWeight: "700",
+  },
   backButtonContainer: {
     width: 44,
     height: 44,
@@ -341,18 +424,18 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     backgroundColor: colors.neutral[50],
   },
-  backButton: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: colors.text,
-  },
   title: {
     ...typography.h5,
     color: colors.text,
     fontWeight: "700",
   },
   placeholder: {
-    width: 44,
+    minWidth: 44,
+    alignItems: "flex-end",
+  },
+  loadingContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: "center",
   },
   userCardContainer: {
     paddingHorizontal: spacing.lg,
@@ -440,7 +523,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   settingIcon: {
-    fontSize: 24,
     marginRight: spacing.lg,
   },
   settingInfo: {
@@ -457,31 +539,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "500",
   },
-  chevron: {
-    fontSize: 20,
-    color: colors.textSecondary,
-  },
   divider: {
     height: 1,
     backgroundColor: colors.borderLight,
-  },
-  changePasswordButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary[100],
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.lg,
-  },
-  changePasswordIcon: {
-    fontSize: 18,
-    marginRight: spacing.md,
-  },
-  changePasswordText: {
-    ...typography.subtitle2,
-    color: colors.primary.main,
-    fontWeight: "700",
   },
   preferenceGroup: {
     backgroundColor: colors.surface,
@@ -508,31 +568,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
   },
-  infoGroup: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    overflow: "hidden",
-    ...(shadows.sm as any),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  infoItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  infoLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: "600",
-  },
-  infoValue: {
-    ...typography.body2,
-    color: colors.text,
-    fontWeight: "500",
-  },
   inputField: {
     marginVertical: spacing.sm,
     backgroundColor: colors.surface,
@@ -548,6 +583,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: "center",
     marginHorizontal: spacing.sm,
+    minHeight: 48,
+    justifyContent: "center",
   },
   saveButton: {
     backgroundColor: colors.primary.main,
@@ -558,30 +595,6 @@ const styles = StyleSheet.create({
   editButtonText: {
     ...typography.button,
     color: colors.neutral.white,
-    fontWeight: "600",
-  },
-  linkSection: {
-    marginTop: spacing.lg,
-  },
-  linkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    ...(shadows.sm as any),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  linkIcon: {
-    fontSize: 20,
-    marginRight: spacing.md,
-  },
-  linkText: {
-    ...typography.body2,
-    color: colors.primary.main,
     fontWeight: "600",
   },
   dangerSection: {
@@ -599,10 +612,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
   },
-  logoutIcon: {
-    fontSize: 18,
-    marginRight: spacing.md,
-  },
   logoutButtonText: {
     ...typography.button,
     color: colors.primary.main,
@@ -617,10 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     borderColor: colors.danger.light,
-  },
-  deleteIcon: {
-    fontSize: 18,
-    marginRight: spacing.md,
+    minHeight: 56,
   },
   deleteButtonText: {
     ...typography.button,

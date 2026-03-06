@@ -98,11 +98,11 @@ const GradCAMScreen = ({ navigation }: Props) => {
           <View style={styles.detailBox}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Model:</Text>
-              <Text style={styles.detailValue}>ResNet50 + GradCAM</Text>
+              <Text style={styles.detailValue}>MobileNetV2 + GradCAM</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Accuracy:</Text>
-              <Text style={styles.detailValue}>94.5%</Text>
+              <Text style={styles.detailValue}>87.1%</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Processing Time:</Text>

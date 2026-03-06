@@ -1,115 +1,123 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   SafeAreaView,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
-import { Text, Card, Button, Divider } from 'react-native-paper';
+import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, spacing, borderRadius } from '@/styles/theme';
+import { AnalysisRecord, tyreAPI } from '@/utils/api';
+import { useAuthStore } from '@/utils/store';
 
 type Props = any;
 
 const HistoryScreen = ({ navigation }: Props) => {
-  const [filterStatus, setFilterStatus] = useState<'all' | 'good' | 'warning' | 'danger'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'good' | 'defective'>('all');
+  const [loading, setLoading] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [scanHistory, setScanHistory] = useState<AnalysisRecord[]>([]);
+  const user = useAuthStore((state) => state.user);
 
-  const scanHistory = [
-    {
-      id: '1',
-      tyreName: 'Front Left Tyre',
-      condition: 'Good',
-      depth: '6.5 mm',
-      wear: '35%',
-      date: 'Today at 2:30 PM',
-      timestamp: new Date(),
-    },
-    {
-      id: '2',
-      tyreName: 'Rear Right Tyre',
-      condition: 'Warning',
-      depth: '4.2 mm',
-      wear: '65%',
-      date: 'Yesterday at 5:00 PM',
-      timestamp: new Date(Date.now() - 86400000),
-    },
-    {
-      id: '3',
-      tyreName: 'Front Right Tyre',
-      condition: 'Good',
-      depth: '6.8 mm',
-      wear: '30%',
-      date: '2 days ago',
-      timestamp: new Date(Date.now() - 172800000),
-    },
-    {
-      id: '4',
-      tyreName: 'Rear Left Tyre',
-      condition: 'Good',
-      depth: '7.1 mm',
-      wear: '25%',
-      date: '3 days ago',
-      timestamp: new Date(Date.now() - 259200000),
-    },
-  ];
+  const loadHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await tyreAPI.getAnalysisHistory({
+        user_id: user?.id,
+        user_email: user?.email,
+        limit: 100,
+      });
+      setScanHistory(response.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Failed to load history.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.email]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+      return undefined;
+    }, [loadHistory])
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Good':
+      case 'good':
         return colors.success.main;
-      case 'Warning':
-        return colors.warning.main;
-      case 'Danger':
+      case 'defective':
         return colors.danger.main;
       default:
         return colors.neutral.gray400;
     }
   };
 
-  const filteredHistory = scanHistory.filter((item) => {
-    if (filterStatus === 'all') return true;
-    return item.condition.toLowerCase() === filterStatus;
-  });
+  const filteredHistory = useMemo(() => {
+    if (filterStatus === 'all') return scanHistory;
+    return scanHistory.filter((item) => item.label === filterStatus);
+  }, [scanHistory, filterStatus]);
 
-  const renderHistoryItem = ({ item }: { item: typeof scanHistory[0] }) => (
-    <Card style={styles.historyCard}>
-      <Card.Content style={styles.historyContent}>
-        <View style={styles.historyLeft}>
-          <View>
-            <Text style={styles.historyTitle}>{item.tyreName}</Text>
-            <Text style={styles.historyDate}>{item.date}</Text>
+  const handleOpenDetail = async (id: string) => {
+    try {
+      setOpeningId(id);
+      const response = await tyreAPI.getAnalysisDetail(id);
+      navigation.navigate('Results', { analysisData: response.data });
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Failed to open scan details.');
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
+  const renderHistoryItem = ({ item }: { item: AnalysisRecord }) => (
+    <TouchableOpacity activeOpacity={0.8} onPress={() => handleOpenDetail(item.id)}>
+      <Card style={styles.historyCard}>
+        <Card.Content style={styles.historyContent}>
+          <View style={styles.historyLeft}>
+            <View>
+              <Text style={styles.historyTitle}>{item.filename || 'Tyre Scan'}</Text>
+              <Text style={styles.historyDate}>
+                {new Date(item.created_at).toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.historyMetrics}>
+              <Text style={styles.metricSmall}>Confidence: {item.confidence}%</Text>
+              <Text style={styles.metricSmall}>Score: {item.raw_score}</Text>
+            </View>
           </View>
-          <View style={styles.historyMetrics}>
-            <Text style={styles.metricSmall}>Depth: {item.depth}</Text>
-            <Text style={styles.metricSmall}>Wear: {item.wear}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(item.label) },
+            ]}
+          >
+            {openingId === item.id ? (
+              <ActivityIndicator color={colors.neutral.white} size="small" />
+            ) : (
+              <Text style={styles.statusBadgeText}>{item.label.toUpperCase()}</Text>
+            )}
           </View>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.condition) },
-          ]}
-        >
-          <Text style={styles.statusBadgeText}>{item.condition}</Text>
-        </View>
-      </Card.Content>
-    </Card>
+        </Card.Content>
+      </Card>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+          <Text style={styles.backButton}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Scan History</Text>
         <View style={styles.placeholder} />
       </View>
 
-      {/* Stats */}
       <View style={styles.statsContainer}>
         <Card style={styles.statCard}>
           <Card.Content style={styles.statContent}>
@@ -121,32 +129,31 @@ const HistoryScreen = ({ navigation }: Props) => {
         <Card style={styles.statCard}>
           <Card.Content style={styles.statContent}>
             <Text style={styles.statValue}>
-              {scanHistory.filter((s) => s.condition === 'Good').length}
+              {scanHistory.filter((s) => s.label === 'good').length}
             </Text>
-            <Text style={styles.statLabel}>Healthy</Text>
+            <Text style={styles.statLabel}>Good</Text>
           </Card.Content>
         </Card>
 
         <Card style={styles.statCard}>
           <Card.Content style={styles.statContent}>
             <Text style={styles.statValue}>
-              {scanHistory.filter((s) => s.condition !== 'Good').length}
+              {scanHistory.filter((s) => s.label === 'defective').length}
             </Text>
-            <Text style={styles.statLabel}>Needs Check</Text>
+            <Text style={styles.statLabel}>Defective</Text>
           </Card.Content>
         </Card>
       </View>
 
-      {/* Filters */}
       <View style={styles.filterContainer}>
-        {['all', 'good', 'warning', 'danger'].map((status) => (
+        {['all', 'good', 'defective'].map((status) => (
           <TouchableOpacity
             key={status}
             style={[
               styles.filterButton,
               filterStatus === status && styles.filterButtonActive,
             ]}
-            onPress={() => setFilterStatus(status as any)}
+            onPress={() => setFilterStatus(status as 'all' | 'good' | 'defective')}
           >
             <Text
               style={[
@@ -160,29 +167,27 @@ const HistoryScreen = ({ navigation }: Props) => {
         ))}
       </View>
 
-      {/* History List */}
-      <FlatList
-        data={filteredHistory}
-        renderItem={renderHistoryItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        scrollEnabled={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>📭</Text>
-            <Text style={styles.emptyText}>No scans found</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredHistory}
+          renderItem={renderHistoryItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>{error || 'No scans found'}</Text>
+            </View>
+          }
+        />
+      )}
 
-      {/* Export Button */}
       <View style={styles.exportContainer}>
-        <Button
-          mode="outlined"
-          style={styles.exportButton}
-          labelStyle={styles.exportButtonLabel}
-        >
-          Export Report
+        <Button mode="outlined" style={styles.exportButton} onPress={loadHistory}>
+          Refresh
         </Button>
       </View>
     </SafeAreaView>
@@ -204,9 +209,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   backButton: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.primary.main,
   },
   title: {
     fontSize: 16,
@@ -214,7 +219,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   placeholder: {
-    width: 20,
+    width: 30,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -267,6 +272,11 @@ const styles = StyleSheet.create({
   },
   filterButtonTextActive: {
     color: colors.neutral.white,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     paddingHorizontal: spacing.lg,
@@ -321,10 +331,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.xxl,
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
   emptyText: {
     fontSize: 14,
     color: colors.textSecondary,
@@ -336,11 +342,6 @@ const styles = StyleSheet.create({
   exportButton: {
     borderColor: colors.primary.main,
     paddingVertical: spacing.md,
-  },
-  exportButtonLabel: {
-    color: colors.primary.main,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
 

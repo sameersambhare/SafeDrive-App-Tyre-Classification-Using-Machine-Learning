@@ -17,6 +17,8 @@ import {
   typography,
   shadows,
 } from "@/styles/theme";
+import { authAPI, userAPI } from "@/utils/api";
+import { useAuthStore } from "@/utils/store";
 
 type Props = any;
 
@@ -25,17 +27,39 @@ const LoginScreen = ({ navigation }: Props) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const setSession = useAuthStore((state) => state.setSession);
 
   const handleLogin = async () => {
-    setLoading(true);
-    // Simulate login API call
-    setTimeout(() => {
-      // Store user info
-      setLoading(false);
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      const response = await authAPI.login(email.trim(), password);
+      const { user, token } = response.data;
+      const profileRes = await userAPI.getProfile({ user_id: user.id, email: user.email });
+      const profile = profileRes.data;
+
+      setSession(
+        {
+          id: profile.id,
+          name: profile.fullName || user.fullName,
+          email: profile.email || user.email,
+          phone: profile.phone || "",
+        },
+        token
+      );
+
       navigation.replace("Dashboard");
-    }, 1500);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        "Login failed. Check backend URL/network and try again.";
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isFormValid = email.trim() && password.trim();
@@ -49,7 +73,6 @@ const LoginScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Icon name="shield-lock" size={40} color={colors.primary.main} />
@@ -60,7 +83,6 @@ const LoginScreen = ({ navigation }: Props) => {
           </Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
@@ -100,7 +122,7 @@ const LoginScreen = ({ navigation }: Props) => {
             >
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder="Password"
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -120,6 +142,8 @@ const LoginScreen = ({ navigation }: Props) => {
             </View>
           </View>
 
+          {!!errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
           <TouchableOpacity
             style={[
               styles.loginButton,
@@ -138,40 +162,11 @@ const LoginScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
         </View>
 
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.divider} />
-        </View>
-
-        {/* Social Login */}
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Icon name="google" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Icon name="facebook" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Icon name="apple" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Register Link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.replace("Register")}>
             <Text style={styles.registerLink}>Create Account</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Security Notice */}
-        <View style={styles.securityNotice}>
-          <Icon name="lock-outline" size={20} color={colors.success.main} />
-          <Text style={styles.securityText}>
-            Your data is encrypted and secure
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -201,9 +196,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: spacing.xl,
-  },
-  headerIconText: {
-    fontSize: 40,
   },
   title: {
     ...typography.h2,
@@ -259,6 +251,11 @@ const styles = StyleSheet.create({
     color: colors.primary.main,
     fontWeight: "600",
   },
+  errorText: {
+    ...typography.caption,
+    color: colors.danger.main,
+    marginBottom: spacing.md,
+  },
   loginButton: {
     backgroundColor: colors.primary.main,
     paddingVertical: 16,
@@ -280,42 +277,6 @@ const styles = StyleSheet.create({
     color: colors.neutral.white,
     fontWeight: "700",
   },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: spacing.xxl,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    marginHorizontal: spacing.md,
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: "500",
-  },
-  socialContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.lg,
-    marginBottom: spacing.xxl,
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    ...(shadows.sm as any),
-  },
-  socialIcon: {
-    fontSize: 24,
-  },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -330,26 +291,6 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: colors.primary.main,
     fontWeight: "700",
-  },
-  securityNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: `${colors.success.main}10`,
-    borderWidth: 1,
-    borderColor: `${colors.success.main}30`,
-  },
-  securityIcon: {
-    fontSize: 16,
-    marginRight: spacing.sm,
-  },
-  securityText: {
-    ...typography.caption,
-    color: colors.success.main,
-    fontWeight: "500",
   },
 });
 

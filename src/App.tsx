@@ -17,6 +17,7 @@ import TyreResultScreen from '@/screens/TyreResultScreen';
 import GradCAMScreen from '@/screens/GradCAMScreen';
 import HistoryScreen from '@/screens/HistoryScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
+import { AnalysisRecord } from '@/utils/api';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -26,7 +27,7 @@ export type RootStackParamList = {
   Dashboard: undefined;
   Capture: undefined;
   Preview: { imageData: string };
-  Results: { analysisData: any };
+  Results: { analysisData: AnalysisRecord };
   GradCAM: undefined;
   History: undefined;
   Profile: undefined;
@@ -38,7 +39,6 @@ const AppNavigator = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Simulate app initialization
     const timer = setTimeout(() => setIsLoaded(true), 1000);
     return () => clearTimeout(timer);
   }, []);

@@ -6,67 +6,55 @@ import {
   SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
-import { Text, Button, Card, Divider } from 'react-native-paper';
+import { Text, Button, Card } from 'react-native-paper';
 
 import { colors, spacing, borderRadius } from '@/styles/theme';
+import { AnalysisRecord } from '@/utils/api';
 
-type Props = any;
+type Props = {
+  route: { params: { analysisData: AnalysisRecord } };
+  navigation: any;
+};
 
-const TyreResultScreen = ({ navigation }: Props) => {
-  const analysisResult = {
-    tyreName: 'Front Left Tyre',
-    condition: 'Good',
-    conditionColor: colors.success.main,
-    depth: '6.5 mm',
-    wear: '35%',
-    alignment: 'Perfect',
-    pressure: 'Normal',
-    temperature: 'Optimal',
-    recommendations: [
-      'Tyre is in good condition',
-      'Monitor tread depth regularly',
-      'Maintain proper pressure',
-    ],
-  };
+const TyreResultScreen = ({ route, navigation }: Props) => {
+  const { analysisData } = route.params;
+
+  const isGood = analysisData.label === 'good';
+  const condition = isGood ? 'Good' : 'Defective';
+  const conditionColor = isGood ? colors.success.main : colors.danger.main;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>←</Text>
+            <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Analysis Result</Text>
           <View style={styles.placeholder} />
         </View>
 
-        {/* Result Badge */}
         <View style={styles.resultBadge}>
-          <View
-            style={[
-              styles.resultCircle,
-              { backgroundColor: analysisResult.conditionColor },
-            ]}
-          >
-            <Text style={styles.resultEmoji}>✓</Text>
+          <View style={[styles.resultCircle, { backgroundColor: conditionColor }]}>
+            <Text style={styles.resultEmoji}>{isGood ? 'OK' : '!'}</Text>
           </View>
-          <Text style={styles.resultTitle}>{analysisResult.condition}</Text>
-          <Text style={styles.resultSubtitle}>{analysisResult.tyreName}</Text>
+          <Text style={styles.resultTitle}>{condition}</Text>
+          <Text style={styles.resultSubtitle}>
+            Confidence: {analysisData.confidence}%
+          </Text>
         </View>
 
-        {/* Detailed Metrics */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Detailed Analysis</Text>
+          <Text style={styles.sectionTitle}>Model Output</Text>
 
           <Card style={styles.metricCard}>
             <Card.Content style={styles.metricContent}>
               <View style={styles.metricLeft}>
-                <Text style={styles.metricLabel}>Tread Depth</Text>
-                <Text style={styles.metricValue}>{analysisResult.depth}</Text>
+                <Text style={styles.metricLabel}>Raw Score</Text>
+                <Text style={styles.metricValue}>{analysisData.raw_score}</Text>
               </View>
               <View style={styles.metricRight}>
-                <Text style={styles.metricUnit}>Recommended: 8mm+</Text>
+                <Text style={styles.metricUnit}>Sigmoid output</Text>
               </View>
             </Card.Content>
           </Card>
@@ -74,44 +62,23 @@ const TyreResultScreen = ({ navigation }: Props) => {
           <Card style={styles.metricCard}>
             <Card.Content style={styles.metricContent}>
               <View style={styles.metricLeft}>
-                <Text style={styles.metricLabel}>Wear Level</Text>
-                <Text style={styles.metricValue}>{analysisResult.wear}</Text>
+                <Text style={styles.metricLabel}>Threshold</Text>
+                <Text style={styles.metricValue}>{analysisData.threshold}</Text>
               </View>
               <View style={styles.metricRight}>
-                <Text style={styles.metricUnit}>Acceptable: {'<'}50%</Text>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <Card.Content style={styles.metricContent}>
-              <View style={styles.metricLeft}>
-                <Text style={styles.metricLabel}>Alignment</Text>
-                <Text style={styles.metricValue}>{analysisResult.alignment}</Text>
-              </View>
-              <View style={styles.metricRight}>
-                <Text style={styles.metricUnit}>Status: Optimal</Text>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <Card.Content style={styles.metricContent}>
-              <View style={styles.metricLeft}>
-                <Text style={styles.metricLabel}>Pressure</Text>
-                <Text style={styles.metricValue}>{analysisResult.pressure}</Text>
-              </View>
-              <View style={styles.metricRight}>
-                <Text style={styles.metricUnit}>Status: Normal</Text>
+                <Text style={styles.metricUnit}>
+                  {analysisData.raw_score > analysisData.threshold
+                    ? 'Above threshold'
+                    : 'Below threshold'}
+                </Text>
               </View>
             </Card.Content>
           </Card>
         </View>
 
-        {/* Recommendations */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recommendations</Text>
-          {analysisResult.recommendations.map((rec, index) => (
+          {analysisData.recommendations.map((rec, index) => (
             <View key={index} style={styles.recommendationItem}>
               <View style={styles.recommendationDot} />
               <Text style={styles.recommendationText}>{rec}</Text>
@@ -119,19 +86,6 @@ const TyreResultScreen = ({ navigation }: Props) => {
           ))}
         </View>
 
-        {/* AI Explainability */}
-        <View style={styles.section}>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.navigate('GradCAM')}
-            style={styles.explanationButton}
-            labelStyle={styles.explanationButtonLabel}
-          >
-            View AI Analysis (GradCAM)
-          </Button>
-        </View>
-
-        {/* Action Buttons */}
         <View style={styles.actionContainer}>
           <Button
             mode="contained"
@@ -164,9 +118,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.primary.main,
   },
   title: {
     fontSize: 16,
@@ -192,6 +146,7 @@ const styles = StyleSheet.create({
   resultEmoji: {
     fontSize: 40,
     color: colors.neutral.white,
+    fontWeight: '700',
   },
   resultTitle: {
     fontSize: 28,
@@ -261,15 +216,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     lineHeight: 20,
-  },
-  explanationButton: {
-    borderColor: colors.primary.main,
-    paddingVertical: spacing.md,
-  },
-  explanationButtonLabel: {
-    color: colors.primary.main,
-    fontSize: 14,
-    fontWeight: '600',
   },
   actionContainer: {
     paddingHorizontal: spacing.lg,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -7,8 +7,9 @@ import {
   SafeAreaView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Text } from "react-native-paper";
+import { ActivityIndicator, Text } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   colors,
   spacing,
@@ -16,21 +17,73 @@ import {
   typography,
   shadows,
 } from "@/styles/theme";
+import { userAPI } from "@/utils/api";
+import { useAuthStore } from "@/utils/store";
 
 type Props = any;
 
 const DashboardScreen = ({ navigation }: Props) => {
-  const [userName, setUserName] = useState("User");
+  const user = useAuthStore((state) => state.user);
+  const setSession = useAuthStore((state) => state.setSession);
+  const token = useAuthStore((state) => state.token);
+
+  const [loading, setLoading] = useState(false);
   const [safetyStatus, setSafetyStatus] = useState<
     "good" | "warning" | "danger"
   >("good");
-  const [scansThisMonth, setScansThisMonth] = useState(12);
+  const [scansThisMonth, setScansThisMonth] = useState(0);
+  const [fleetHealth, setFleetHealth] = useState(0);
+  const [alerts, setAlerts] = useState(0);
 
-  useEffect(() => {
-    // Retrieve stored user name
-    setUserName("John Doe");
-    setSafetyStatus("good");
-  }, []);
+  const userName = useMemo(() => user?.name || "User", [user?.name]);
+
+  const loadDashboard = useCallback(async () => {
+    if (!user?.id && !user?.email) return;
+
+    try {
+      setLoading(true);
+      const response = await userAPI.getDashboard({
+        user_id: user?.id,
+        email: user?.email,
+      });
+      const data = response.data;
+
+      setSession(
+        {
+          id: data.user.id,
+          name: data.user.fullName,
+          email: data.user.email,
+          phone: data.user.phone || "",
+        },
+        token
+      );
+
+      setScansThisMonth(data.stats.scans_this_month);
+      setFleetHealth(data.stats.fleet_health);
+      setAlerts(data.stats.alerts);
+
+      if (data.stats.current_status === "Perfect") setSafetyStatus("good");
+      else if (data.stats.current_status === "Needs Check") setSafetyStatus("warning");
+      else setSafetyStatus("danger");
+    } catch (error) {
+      // Keep existing values on transient API errors.
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.email, setSession, token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+
+      // Near-real-time updates while dashboard screen is open.
+      const intervalId = setInterval(() => {
+        loadDashboard();
+      }, 5000);
+
+      return () => clearInterval(intervalId);
+    }, [loadDashboard])
+  );
 
   const getStatusColor = () => {
     switch (safetyStatus) {
@@ -96,7 +149,6 @@ const DashboardScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
         <LinearGradient
           colors={[colors.primary.main, colors.primary[800]]}
           start={{ x: 0, y: 0 }}
@@ -120,7 +172,6 @@ const DashboardScreen = ({ navigation }: Props) => {
           </View>
         </LinearGradient>
 
-        {/* Safety Status Card */}
         <View style={styles.statusCardContainer}>
           <View style={[styles.statusCard, { borderColor: getStatusColor() }]}>
             <View style={styles.statusContentRow}>
@@ -140,28 +191,30 @@ const DashboardScreen = ({ navigation }: Props) => {
                   </Text>
                 </View>
               </View>
-              <Icon name="check-circle" size={24} color={getStatusColor()} />
+              {loading ? (
+                <ActivityIndicator color={getStatusColor()} />
+              ) : (
+                <Icon name="check-circle" size={24} color={getStatusColor()} />
+              )}
             </View>
           </View>
         </View>
 
-        {/* Stats Row */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{scansThisMonth}</Text>
             <Text style={styles.statLabel}>Scans this month</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>98%</Text>
+            <Text style={styles.statValue}>{fleetHealth}%</Text>
             <Text style={styles.statLabel}>Fleet health</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{alerts}</Text>
             <Text style={styles.statLabel}>Alerts</Text>
           </View>
         </View>
 
-        {/* Quick Access Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
@@ -186,87 +239,6 @@ const DashboardScreen = ({ navigation }: Props) => {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
-        {/* Recent Activity Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Scans</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("History")}>
-              <Text style={styles.viewAll}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.activityCard}
-            onPress={() => navigation.navigate("Results")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.activityLeft}>
-              <View style={styles.activityIconBg}>
-                <Icon name="magnify" size={20} color={colors.primary.main} />
-              </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityTitle}>Front Left Tyre</Text>
-                <Text style={styles.activityDate}>Today, 2:30 PM</Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.activityBadge,
-                { backgroundColor: colors.success.light },
-              ]}
-            >
-              <Text
-                style={[styles.activityStatus, { color: colors.success.main }]}
-              >
-                Good
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.activityCard}
-            onPress={() => navigation.navigate("Results")}
-            activeOpacity={0.7}
-          >
-            <View style={styles.activityLeft}>
-              <View style={styles.activityIconBg}>
-                <Icon
-                  name="alert-circle-outline"
-                  size={20}
-                  color={colors.warning.main}
-                />
-              </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityTitle}>Rear Right Tyre</Text>
-                <Text style={styles.activityDate}>Yesterday, 5:00 PM</Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.activityBadge,
-                { backgroundColor: colors.warning.light },
-              ]}
-            >
-              <Text
-                style={[styles.activityStatus, { color: colors.warning.main }]}
-              >
-                Check
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Help Section */}
-        <View style={styles.helpSection}>
-          <Text style={styles.helpIcon}>💡</Text>
-          <Text style={styles.helpTitle}>
-            How to get the most out of SafeDrive?
-          </Text>
-          <Text style={styles.helpDescription}>
-            Regular scans help maintain optimal tyre health and safety
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -348,11 +320,6 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     marginRight: spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   statusLabel: {
     ...typography.caption,
@@ -363,9 +330,6 @@ const styles = StyleSheet.create({
   statusValue: {
     ...typography.h6,
     fontWeight: "700",
-  },
-  statusEmoji: {
-    fontSize: 24,
   },
   statsContainer: {
     flexDirection: "row",
@@ -398,21 +362,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
   sectionTitle: {
     ...typography.h5,
     color: colors.text,
     fontWeight: "700",
-  },
-  viewAll: {
-    ...typography.subtitle2,
-    color: colors.primary.main,
-    fontWeight: "600",
+    marginBottom: spacing.lg,
   },
   gridContainer: {
     flexDirection: "row",
@@ -438,9 +392,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: spacing.md,
   },
-  cardIcon: {
-    fontSize: 28,
-  },
   cardTitle: {
     ...typography.subtitle2,
     color: colors.text,
@@ -448,83 +399,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   cardDescription: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  activityCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    ...(shadows.sm as any),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  activityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  activityIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.neutral[50],
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  activityIcon: {
-    fontSize: 24,
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
-    ...typography.subtitle2,
-    color: colors.text,
-    fontWeight: "600",
-    marginBottom: spacing.xs,
-  },
-  activityDate: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  activityBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  activityStatus: {
-    ...typography.buttonSmall,
-    fontWeight: "600",
-  },
-  helpSection: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-    backgroundColor: `${colors.primary.main}10`,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: `${colors.primary.main}30`,
-    alignItems: "center",
-  },
-  helpIcon: {
-    fontSize: 32,
-    marginBottom: spacing.md,
-  },
-  helpTitle: {
-    ...typography.subtitle2,
-    color: colors.text,
-    fontWeight: "600",
-    marginBottom: spacing.sm,
-    textAlign: "center",
-  },
-  helpDescription: {
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: "center",

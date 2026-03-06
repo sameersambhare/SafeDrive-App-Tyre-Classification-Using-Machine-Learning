@@ -30,6 +30,7 @@ export interface AuthState {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  setSession: (user: User, token: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
@@ -41,22 +42,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
   error: null,
 
-  login: async (email, password) => {
+  login: async () => {
     set({ loading: true, error: null });
     try {
-      // API call would go here
-      // const response = await api.post('/auth/login', { email, password });
-      // set({ isAuthenticated: true, user: response.data.user, token: response.data.token });
       set({ isAuthenticated: true, loading: false });
     } catch (error) {
       set({ error: 'Login failed', loading: false });
     }
   },
 
-  register: async (email, password, name) => {
+  register: async () => {
     set({ loading: true, error: null });
     try {
-      // API call would go here
       set({ loading: false });
     } catch (error) {
       set({ error: 'Registration failed', loading: false });
@@ -69,6 +66,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => {
     set({ user });
+  },
+
+  setSession: (user, token) => {
+    set({ isAuthenticated: true, user, token, error: null });
   },
 
   setLoading: (loading) => {
@@ -115,9 +116,6 @@ export const useHistoryStore = create<HistoryState>((set) => ({
   fetchScans: async () => {
     set({ loading: true });
     try {
-      // API call would go here
-      // const response = await api.get('/scans');
-      // set({ scans: response.data });
       set({ loading: false });
     } catch (error) {
       set({ loading: false });

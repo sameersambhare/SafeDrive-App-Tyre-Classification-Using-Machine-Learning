@@ -16,6 +16,8 @@ import {
   typography,
   shadows,
 } from "@/styles/theme";
+import { authAPI, userAPI } from "@/utils/api";
+import { useAuthStore } from "@/utils/store";
 
 type Props = any;
 
@@ -28,22 +30,46 @@ const RegisterScreen = ({ navigation }: Props) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [nameFocused, setNameFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+  const setSession = useAuthStore((state) => state.setSession);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      // Show error
+      setErrorMessage("Passwords do not match.");
       return;
     }
-    setLoading(true);
-    // Simulate register API call
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      const response = await authAPI.register(fullName.trim(), email.trim(), password);
+      const { user, token } = response.data;
+      const profileRes = await userAPI.getProfile({ user_id: user.id, email: user.email });
+      const profile = profileRes.data;
+
+      setSession(
+        {
+          id: profile.id,
+          name: profile.fullName || user.fullName,
+          email: profile.email || user.email,
+          phone: profile.phone || "",
+        },
+        token
+      );
+
       navigation.replace("Dashboard");
-    }, 1500);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        "Registration failed. Check backend URL/network and try again.";
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isFormValid =
@@ -63,13 +89,12 @@ const RegisterScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.replace("Login")}
             style={styles.backButtonContainer}
           >
-            <Text style={styles.backButton}>‹</Text>
+            <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>
@@ -77,7 +102,6 @@ const RegisterScreen = ({ navigation }: Props) => {
           </Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
@@ -134,7 +158,7 @@ const RegisterScreen = ({ navigation }: Props) => {
             >
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder="Password"
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -152,7 +176,7 @@ const RegisterScreen = ({ navigation }: Props) => {
                 }
               />
             </View>
-            <Text style={styles.passwordHint}>At least 8 characters</Text>
+            <Text style={styles.passwordHint}>At least 6 characters</Text>
           </View>
 
           <View style={styles.inputGroup}>
@@ -165,7 +189,7 @@ const RegisterScreen = ({ navigation }: Props) => {
             >
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder="Confirm password"
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
@@ -183,25 +207,22 @@ const RegisterScreen = ({ navigation }: Props) => {
                 }
               />
             </View>
-            {password && confirmPassword && password !== confirmPassword && (
-              <Text style={styles.errorHint}>Passwords don't match</Text>
-            )}
           </View>
 
-          {/* Terms & Conditions */}
           <View style={styles.termsContainer}>
             <TouchableOpacity
               style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}
               onPress={() => setAgreeToTerms(!agreeToTerms)}
               activeOpacity={0.7}
             >
-              {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
+              {agreeToTerms && <Text style={styles.checkmark}>OK</Text>}
             </TouchableOpacity>
             <Text style={styles.termsText}>
-              I agree to the{" "}
-              <Text style={styles.termsLink}>Terms & Conditions</Text>
+              I agree to the <Text style={styles.termsLink}>Terms & Conditions</Text>
             </Text>
           </View>
+
+          {!!errorMessage && <Text style={styles.errorHint}>{errorMessage}</Text>}
 
           <TouchableOpacity
             style={[
@@ -221,7 +242,6 @@ const RegisterScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
         </View>
 
-        {/* Login Link */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.replace("Login")}>
@@ -248,7 +268,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   backButtonContainer: {
-    width: 44,
+    width: 64,
     height: 44,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.neutral[50],
@@ -257,7 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backButton: {
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: "600",
     color: colors.text,
   },
@@ -312,7 +332,7 @@ const styles = StyleSheet.create({
   errorHint: {
     ...typography.caption,
     color: colors.danger.main,
-    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
     fontWeight: "500",
   },
   termsContainer: {
@@ -338,7 +358,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: colors.neutral.white,
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: "700",
   },
   termsText: {
