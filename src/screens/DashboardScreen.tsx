@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   colors,
   spacing,
@@ -61,28 +62,28 @@ const DashboardScreen = ({ navigation }: Props) => {
     {
       title: "Scan Tyre",
       description: "New analysis",
-      icon: "📸",
+      icon: "camera",
       screen: "Capture",
       color: colors.primary.main,
     },
     {
       title: "History",
       description: "Past scans",
-      icon: "📋",
+      icon: "history",
       screen: "History",
       color: colors.secondary.main,
     },
     {
       title: "Reports",
       description: "Download",
-      icon: "📄",
+      icon: "file-download",
       screen: "History",
       color: colors.info.main,
     },
     {
       title: "Settings",
       description: "Account",
-      icon: "⚙️",
+      icon: "cog",
       screen: "Profile",
       color: colors.warning.main,
     },
@@ -139,7 +140,7 @@ const DashboardScreen = ({ navigation }: Props) => {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.statusEmoji}>✓</Text>
+              <Icon name="check-circle" size={24} color={getStatusColor()} />
             </View>
           </View>
         </View>
@@ -178,7 +179,7 @@ const DashboardScreen = ({ navigation }: Props) => {
                     { backgroundColor: `${item.color}15` },
                   ]}
                 >
-                  <Text style={styles.cardIcon}>{item.icon}</Text>
+                  <Icon name={item.icon} size={28} color={item.color} />
                 </View>
                 <Text style={styles.cardTitle}>{item.title}</Text>
                 <Text style={styles.cardDescription}>{item.description}</Text>
@@ -203,7 +204,7 @@ const DashboardScreen = ({ navigation }: Props) => {
           >
             <View style={styles.activityLeft}>
               <View style={styles.activityIconBg}>
-                <Text style={styles.activityIcon}>🔍</Text>
+                <Icon name="magnify" size={20} color={colors.primary.main} />
               </View>
               <View style={styles.activityInfo}>
                 <Text style={styles.activityTitle}>Front Left Tyre</Text>
@@ -231,7 +232,11 @@ const DashboardScreen = ({ navigation }: Props) => {
           >
             <View style={styles.activityLeft}>
               <View style={styles.activityIconBg}>
-                <Text style={styles.activityIcon}>⚠️</Text>
+                <Icon
+                  name="alert-circle-outline"
+                  size={20}
+                  color={colors.warning.main}
+                />
               </View>
               <View style={styles.activityInfo}>
                 <Text style={styles.activityTitle}>Rear Right Tyre</Text>

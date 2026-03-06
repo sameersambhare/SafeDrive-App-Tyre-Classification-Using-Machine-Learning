@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Text, Switch } from "react-native-paper";
+import { Text, Switch, TextInput } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   colors,
   spacing,
@@ -23,6 +24,12 @@ const ProfileScreen = ({ navigation }: Props) => {
   const [reminders, setReminders] = useState(true);
   const [dataSharing, setDataSharing] = useState(false);
 
+  // editable profile fields
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState("John Doe");
+  const [email, setEmail] = useState("john.doe@email.com");
+  const [phone, setPhone] = useState("+1 (555) 123-4567");
+
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", onPress: () => {}, style: "cancel" },
@@ -34,6 +41,15 @@ const ProfileScreen = ({ navigation }: Props) => {
     ]);
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack && navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // if not able to go back, navigate to Dashboard as fallback
+      navigation.replace("Dashboard");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -43,10 +59,10 @@ const ProfileScreen = ({ navigation }: Props) => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={handleBack}
             style={styles.backButtonContainer}
           >
-            <Text style={styles.backButton}>‹</Text>
+            <Icon name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Profile</Text>
           <View style={styles.placeholder} />
@@ -56,16 +72,19 @@ const ProfileScreen = ({ navigation }: Props) => {
         <View style={styles.userCardContainer}>
           <View style={styles.userCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>JD</Text>
+              <Text style={styles.avatarText}>{name.charAt(0)}</Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>John Doe</Text>
-              <Text style={styles.userEmail}>john.doe@email.com</Text>
+              <Text style={styles.userName}>{name}</Text>
+              <Text style={styles.userEmail}>{email}</Text>
               <View style={styles.userMeta}>
-                <Text style={styles.userMetaText}>👤 Member since 2024</Text>
+                <Text style={styles.userMetaText}>Member since 2024</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.editProfileButton}>
+            <TouchableOpacity
+              style={styles.editProfileButton}
+              onPress={() => setIsEditing(true)}
+            >
               <Text style={styles.editProfileText}>Edit</Text>
             </TouchableOpacity>
           </View>
@@ -75,53 +94,116 @@ const ProfileScreen = ({ navigation }: Props) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
 
-          <View style={styles.settingsGroup}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingIcon}>
-                <Text>👤</Text>
+          {isEditing ? (
+            <View>
+              <TextInput
+                label="Full Name"
+                value={name}
+                mode="outlined"
+                onChangeText={setName}
+                style={styles.inputField}
+              />
+              <TextInput
+                label="Email Address"
+                value={email}
+                mode="outlined"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                style={styles.inputField}
+              />
+              <TextInput
+                label="Phone Number"
+                value={phone}
+                mode="outlined"
+                keyboardType="phone-pad"
+                onChangeText={setPhone}
+                style={styles.inputField}
+              />
+
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={[styles.editButton, styles.saveButton]}
+                  onPress={() => setIsEditing(false)}
+                >
+                  <Text style={styles.editButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editButton, styles.cancelButton]}
+                  onPress={() => setIsEditing(false)}
+                >
+                  <Text style={styles.editButtonText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Full Name</Text>
-                <Text style={styles.settingValue}>John Doe</Text>
-              </View>
-              <TouchableOpacity>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingIcon}>
-                <Text>📧</Text>
+          ) : (
+            <View style={styles.settingsGroup}>
+              <View style={styles.settingItem}>
+                <View style={styles.settingIcon}>
+                  <Icon name="account" size={20} color={colors.primary.main} />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingLabel}>Full Name</Text>
+                  <Text style={styles.settingValue}>{name}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Email Address</Text>
-                <Text style={styles.settingValue}>john.doe@email.com</Text>
+
+              <View style={styles.divider} />
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingIcon}>
+                  <Icon
+                    name="email-outline"
+                    size={20}
+                    color={colors.primary.main}
+                  />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingLabel}>Email Address</Text>
+                  <Text style={styles.settingValue}>{email}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingIcon}>
+                  <Icon
+                    name="phone-outline"
+                    size={20}
+                    color={colors.primary.main}
+                  />
+                </View>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingLabel}>Phone Number</Text>
+                  <Text style={styles.settingValue}>{phone}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingIcon}>
-                <Text>📱</Text>
-              </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Phone Number</Text>
-                <Text style={styles.settingValue}>+1 (555) 123-4567</Text>
-              </View>
-              <TouchableOpacity>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          )}
 
           <TouchableOpacity style={styles.changePasswordButton}>
-            <Text style={styles.changePasswordIcon}>🔐</Text>
+            <Icon name="lock-reset" size={20} color={colors.text} />
             <Text style={styles.changePasswordText}>Change Password</Text>
           </TouchableOpacity>
         </View>
@@ -450,6 +532,33 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: colors.text,
     fontWeight: "500",
+  },
+  inputField: {
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  editActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.lg,
+  },
+  editButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    alignItems: "center",
+    marginHorizontal: spacing.sm,
+  },
+  saveButton: {
+    backgroundColor: colors.primary.main,
+  },
+  cancelButton: {
+    backgroundColor: colors.neutral[300],
+  },
+  editButtonText: {
+    ...typography.button,
+    color: colors.neutral.white,
+    fontWeight: "600",
   },
   linkSection: {
     marginTop: spacing.lg,

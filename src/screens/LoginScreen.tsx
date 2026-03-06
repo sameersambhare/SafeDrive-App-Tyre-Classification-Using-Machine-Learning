@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Text, TextInput } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   colors,
   spacing,
@@ -51,7 +52,7 @@ const LoginScreen = ({ navigation }: Props) => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Text style={styles.headerIconText}>🔐</Text>
+            <Icon name="shield-lock" size={40} color={colors.primary.main} />
           </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>
@@ -147,13 +148,13 @@ const LoginScreen = ({ navigation }: Props) => {
         {/* Social Login */}
         <View style={styles.socialContainer}>
           <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Text style={styles.socialIcon}>🔷</Text>
+            <Icon name="google" size={24} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Text style={styles.socialIcon}>👤</Text>
+            <Icon name="facebook" size={24} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Text style={styles.socialIcon}>🍎</Text>
+            <Icon name="apple" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -167,7 +168,7 @@ const LoginScreen = ({ navigation }: Props) => {
 
         {/* Security Notice */}
         <View style={styles.securityNotice}>
-          <Text style={styles.securityIcon}>🔒</Text>
+          <Icon name="lock-outline" size={20} color={colors.success.main} />
           <Text style={styles.securityText}>
             Your data is encrypted and secure
           </Text>
